@@ -4,11 +4,18 @@ import param
 import re
 
 
-version = param.version.get_setup_version(__file__, 'gdal_dask_reproject', archive_commit="$Format:%h$")
+version = param.version.get_setup_version(__file__, 'cc_reproject', archive_commit="$Format:%h$")
+
+
+if version == 'None':
+    sys.exit("Param seems to be unable to find the version of your package. Are you sure you tagged it with annotation?")
 
 
 if 'sdist' in sys.argv and 'bdist_wheel' in sys.argv:
-    version = re.split('((\d+\.)+\d)', version)[1]
+    try:
+        version = re.split('((\d+\.)+(\d+[^\.|\+|\s]*))', version)[1]
+    except IndexError:
+        sys.exit("Param can't parse your version correctly; are you sure you entered it as a set of digits separated by dots in the tag?")
 
 
 install_requires = [

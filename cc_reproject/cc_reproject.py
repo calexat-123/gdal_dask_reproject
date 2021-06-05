@@ -1,5 +1,3 @@
-from dask.array.routines import isin
-from xrspatial.utils import ArrayTypeFunctionMapping
 import numpy as np
 import xarray as xr
 from dask.highlevelgraph import HighLevelGraph
@@ -24,8 +22,9 @@ class ArrayFuncMap:
             return self.np_func
         if isinstance(arr.data, da.Array):
             return self.dask_func
-        else: raise NotImplementedError('only np and dask arrays supported for now')
-
+        else:
+            raise NotImplementedError('only np and dask arrays '
+                                      'supported for now')
 
 
 def tokenize(prefix):
@@ -103,14 +102,14 @@ def _transform_bounds(bounds, src_crs, dst_crs):
 
 def _chunks_from_shapes_numblocks(chunkshapes, numblocks):
     np_arr = np.asarray(chunkshapes).reshape(*numblocks, 3)
-    first_col = np_arr[:,:,0,:]
-    hs = first_col[:,:,1].tolist()[0]
+    first_col = np_arr[:, :, 0, :]
+    hs = first_col[:, :, 1].tolist()[0]
     hs = tuple(hs)
-    first_row = np_arr[:,0,:,:]
-    ws = first_row[:,:,2].tolist()[0]
+    first_row = np_arr[:, 0, :, :]
+    ws = first_row[:, :, 2].tolist()[0]
     ws = tuple(ws)
-    bands_dim = np_arr[0,:,:,:]
-    bs = bands_dim[:,:,0].flatten()
+    bands_dim = np_arr[0, :, :, :]
+    bs = bands_dim[:, :, 0].flatten()
     if np.all(bs == 1):
         bs = (1,)
     else:
@@ -125,13 +124,14 @@ def _calc_reproject_shape(src_bounds, dst_bounds, src_shape):
     src_X = s_right - s_left
     src_Y = s_top - s_bottom
     src_XperY = src_X / src_Y
-    
+
     d_left, d_bottom, d_right, d_top = dst_bounds
     dst_X = d_right - d_left
     dst_Y = d_top - d_bottom
     dst_XperY = dst_X / dst_Y
 
-    d_width, d_height = abs(int(math.ceil(s_width * (dst_XperY / src_XperY)))),\
+    d_width, d_height = abs(int(math.ceil(s_width *
+                                          (dst_XperY / src_XperY)))),\
         abs(int(math.ceil(s_height * (src_XperY / dst_XperY))))
     dst_shape = [s_b, d_height, d_width]
     return dst_shape
@@ -142,31 +142,31 @@ def _correct_dbk_shapes(dbk_shapes, numblocks):
     orig_shape = np_arr.shape
     np_arr = np_arr.reshape(*numblocks, 3)
     for i in range(numblocks[2]):
-        cols = np_arr[:,:,i,:]
-        ws = cols[:,:,2]
+        cols = np_arr[:, :, i, :]
+        ws = cols[:, :, 2]
         mean_w = ws.mean()
-        ws[:,:] = mean_w
+        ws[:, :] = mean_w
     for i in range(numblocks[1]):
-        rows = np_arr[:,i,:,:]
-        hs = rows[:,:,1]
+        rows = np_arr[:, i, :, :]
+        hs = rows[:, :, 1]
         mean_h = hs.mean()
-        hs[:,:] = mean_h
+        hs[:, :] = mean_h
     dbk_shapes = np_arr.reshape(orig_shape).tolist()
     return dbk_shapes
 
 
 def _sum_dbk_shapes(chunkshapes, numblocks):
     np_arr = np.asarray(chunkshapes).reshape(*numblocks, 3)
-    first_col = np_arr[:,:,0,:]
-    tot_height = first_col[:,:,1].sum()
-    first_row = np_arr[:,0,:,:]
-    tot_width = first_row[:,:,2].sum()
+    first_col = np_arr[:, :, 0, :]
+    tot_height = first_col[:, :, 1].sum()
+    first_row = np_arr[:, 0, :, :]
+    tot_width = first_row[:, :, 2].sum()
     dst_hw = (tot_height, tot_width)
     return dst_hw
 
 
 def _add_xr_da_coords(data, bounds):
-    bands, height, width = shape = data.shape
+    bands, height, width = data.shape
     left, bottom, right, top = bounds
     resx, resy = (right - left) / width, (top - bottom) / -height
     xs = np.arange(width) * resx + (left + resx / 2)
@@ -182,24 +182,31 @@ def _add_xr_da_coords(data, bounds):
     return data_da
 
 
-def _block_reproject(block, sbk_bounds, dbk_bounds, dbk_shape, src_crs, dst_crs):
-    sbk_bands, sbk_height, sbk_width = sbk_shape = block.shape
+def _block_reproject(block,
+                     sbk_bounds,
+                     dbk_bounds,
+                     dbk_shape,
+                     src_crs,
+                     dst_crs):
+    sbk_bands, sbk_height, sbk_width = block.shape
     s_left, s_bottom, s_right, s_top = sbk_bounds
-    src_resx, src_resy = (s_right - s_left) / sbk_width, (s_top - s_bottom) / -sbk_height
-    
+    src_resx, src_resy = (s_right - s_left) / sbk_width,\
+                         (s_top - s_bottom) / -sbk_height
+
     sbk_transform = rasterio.Affine(src_resx, 0, s_left, 0, src_resy, s_top)
-    
+
     d_left, d_bottom, d_right, d_top = dbk_bounds
     dbk_b, dbk_height, dbk_width = dbk_shape
-    dst_resx, dst_resy = dst_res = (d_right - d_left) / dbk_width, (d_top - d_bottom) / -dbk_height
-    
+    dst_resx, dst_resy = (d_right - d_left) / dbk_width,\
+                         (d_top - d_bottom) / -dbk_height
+
     dbk_transform = rasterio.Affine(dst_resx, 0, d_left, 0, dst_resy, d_top)
-    
+
     src_nodata = dst_nodata = 0
-    
+
     source = block
     destination = np.zeros((1, dbk_height, dbk_width), dtype=np.uint8)
-    
+
     reproject(source,
               destination=destination,
               src_transform=sbk_transform,
@@ -208,7 +215,7 @@ def _block_reproject(block, sbk_bounds, dbk_bounds, dbk_shape, src_crs, dst_crs)
               dst_transform=dbk_transform,
               dst_crs=dst_crs,
               dst_nodata=dst_nodata)
-    
+
     return destination
 
 
@@ -219,8 +226,13 @@ def _numpy_reproject(arr, dst_crs, **kwargs):
     src_bounds = arr.rio.bounds()
     dst_bounds = _transform_bounds(src_bounds, src_crs, dst_crs)
     dst_shape = _calc_reproject_shape(src_bounds, dst_bounds, src_shape)
-    
-    reprojected_data = _block_reproject(data, src_bounds, dst_bounds, dst_shape, src_crs, dst_crs)
+
+    reprojected_data = _block_reproject(data,
+                                        src_bounds,
+                                        dst_bounds,
+                                        dst_shape,
+                                        src_crs,
+                                        dst_crs)
     reprojected_da = _add_xr_da_coords(reprojected_data, dst_bounds)
     return reprojected_da
 
@@ -239,8 +251,9 @@ def _dask_reproject(arr, dst_crs, **kwargs):
     chunkshapes = _chunkshapes(chunks)
     arr_locs = _arr_locs(chunklocs, chunkshapes)
     sbk_bounds = _chunk_bounds(src_shape, src_res, src_offsets, arr_locs)
-    dbk_bounds = [_transform_bounds(bounds, src_crs, dst_crs) for bounds in sbk_bounds]
-    
+    dbk_bounds = [_transform_bounds(bounds, src_crs, dst_crs)
+                  for bounds in sbk_bounds]
+
     sd_bounds_s_shp = list(zip(sbk_bounds, dbk_bounds, chunkshapes))
     dbk_shapes = [_calc_reproject_shape(s_bounds, d_bounds, s_shape)
                   for s_bounds, d_bounds, s_shape in sd_bounds_s_shp]
@@ -248,7 +261,10 @@ def _dask_reproject(arr, dst_crs, **kwargs):
     dst_chunks = _chunks_from_shapes_numblocks(dbk_shapes, numblocks)
     dst_hw = _sum_dbk_shapes(dbk_shapes, numblocks)
     dst_shape = (src_bands, dst_hw[0], dst_hw[1])
-    loc_bounds_dst_shp = dict(zip(chunklocs, list(zip(sbk_bounds, dbk_bounds, dbk_shapes))))    
+    loc_bounds_dst_shp = dict(zip(chunklocs,
+                              list(zip(sbk_bounds,
+                                       dbk_bounds,
+                                       dbk_shapes))))
 
     # Now, the fun part!!!
     def apply_reproject(self, loc_bounds_dst_shp, src_crs, dst_crs):
@@ -267,9 +283,18 @@ def _dask_reproject(arr, dst_crs, **kwargs):
                                               dbk_shape,
                                               src_crs,
                                               dst_crs)
-        graph = HighLevelGraph.from_collections(name, layer, dependencies=[self])
-        return da.Array(graph, name, chunks=dst_chunks, dtype=np.uint8, shape=dst_shape)
-    reprojected_data = apply_reproject(arr.data, loc_bounds_dst_shp, src_crs, dst_crs)
+        graph = HighLevelGraph.from_collections(name,
+                                                layer,
+                                                dependencies=[self])
+        return da.Array(graph,
+                        name,
+                        chunks=dst_chunks,
+                        dtype=np.uint8,
+                        shape=dst_shape)
+    reprojected_data = apply_reproject(arr.data,
+                                       loc_bounds_dst_shp,
+                                       src_crs,
+                                       dst_crs)
     reprojected_da = _add_xr_da_coords(reprojected_data, dst_bounds)
     return reprojected_da
 
