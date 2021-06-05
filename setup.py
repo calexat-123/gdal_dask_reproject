@@ -12,12 +12,12 @@ if 'sdist' in sys.argv and 'bdist_wheel' in sys.argv:
 
 
 install_requires = [
+    'param',
+    'pyct <=0.4.6',
     'dask[complete]',
     'pyproj',
     'rasterio',
     'rioxarray',
-    'xarray-spatial',
-    'param',
 ]
 
 setup_args = dict(
@@ -27,6 +27,11 @@ setup_args = dict(
     zip_safe=False,
     packages=['cc_reproject',],
     include_package_data=True,
+    # entry_points={
+    #     'console_scripts': [
+    #         'cc_reproject = cc_reproject.__main__:main'
+    #     ]
+    # }
 )
 
 

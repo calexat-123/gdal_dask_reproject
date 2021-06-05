@@ -1,3 +1,5 @@
+from dask.array.routines import isin
+from xrspatial.utils import ArrayTypeFunctionMapping
 import numpy as np
 import xarray as xr
 from dask.highlevelgraph import HighLevelGraph
@@ -8,9 +10,22 @@ import rioxarray  # noqa: F401
 import rasterio
 from rasterio.warp import reproject
 
-from xrspatial.utils import ArrayTypeFunctionMapping
-
 import math
+
+
+class ArrayFuncMap:
+
+    def __init__(self, np_func, dask_func):
+        self.np_func = np_func
+        self.dask_func = dask_func
+
+    def __call__(self, arr):
+        if isinstance(arr.data, np.ndarray):
+            return self.np_func
+        if isinstance(arr.data, da.Array):
+            return self.dask_func
+        else: raise NotImplementedError('only np and dask arrays supported for now')
+
 
 
 def tokenize(prefix):
@@ -259,18 +274,8 @@ def _dask_reproject(arr, dst_crs, **kwargs):
     return reprojected_da
 
 
-def _cupy_reproject(arr, dst_crs, **kwargs):
-    raise NotImplementedError('cupy not implemented yet')
-
-
-def _dask_cupy_reproject(arr, dst_crs, **kwargs):
-    raise NotImplementedError('dask cupy not implemented yet')
-
-
 def cc_reproject(arr, dst_crs, **kwargs):
-    mapper = ArrayTypeFunctionMapping(numpy_func=_numpy_reproject,
-                                      cupy_func=_cupy_reproject,
-                                      dask_cupy_func=_dask_cupy_reproject,
-                                      dask_func=_dask_reproject)
+    mapper = ArrayFuncMap(np_func=_numpy_reproject,
+                          dask_func=_dask_reproject)
     reprojected = mapper(arr)(arr, dst_crs, **kwargs)
     return reprojected
