@@ -1,9 +1,16 @@
 ## GDAL Reprojection with Dask Arrays
-#### Reprojection of maps with coordinate referrence systems (crs), using GDAL's implementation with Rasterio and supporting Dask backed arrays for parallel computing.
+<br/>
+
+#### Reprojection of maps with coordinate referrence systems (crs), using GDAL's implementation with Rasterio and supporting Dask backed arrays for parallel computing.    
+<br/>
+
+#### Please note: this is not ready yet. It still has issues with missing data and needs to have support added for more features to be practical.
+<br/>
 
 ```pip install gdal_dask_reproject```
 
 ```conda install -c chlochlo gdal_dask_reproject```
+<br/>
 
 #### Usage:
 ##### Import cc_reproject from the main module; then apply cc_reproject with arguments for the input DataArray (containing Rioxarray compatible crs attrs and coords) and the destination crs desired. 
