@@ -1,0 +1,30 @@
+{% set sdata = load_setup_py_data() %}
+
+package:
+  name: gdal_dask_reproject
+  version: "0.0.1"
+
+source:
+  path: ..
+
+requirements:
+  host:
+    - python
+    - setuptools >=46.4.0
+    - pyct <=0.4.6
+    - param
+  run:
+    - python
+    {% for dep in sdata.get('install_requires', {}) %}
+    - {{ dep }}
+    {% endfor %}
+    - dask
+  
+test:
+  imports:
+    - cc_reproject
+  requires:
+    - pytest
+
+about:
+  home: https://github.com/lex-c/gdal_dask_reproject

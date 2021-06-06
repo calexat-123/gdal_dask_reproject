@@ -1,4 +1,3 @@
 build/
-conda.recipe
 *.egg-info/*
 __pycache__/
