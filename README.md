@@ -1,8 +1,6 @@
 ## GDAL Reprojection with Dask Arrays
-<br/>
 
 #### Reprojection of maps with coordinate referrence systems (crs), using GDAL's implementation with Rasterio and supporting Dask backed arrays for parallel computing.    
-<br/>
 
 #### Please note: this is not ready yet. It still has issues with missing data and needs to have support added for more features to be practical.
 <br/>
