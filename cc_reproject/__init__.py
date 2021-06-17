@@ -4,6 +4,6 @@ except ImportError:
     __version__ = "unknown"
 
 try:
-    from .cc_reproject import cc_reproject
+    from .warp import reproject  # noqa: F401
 except ImportError as e:
     raise ImportError(f"{e}:\n can't find module")
