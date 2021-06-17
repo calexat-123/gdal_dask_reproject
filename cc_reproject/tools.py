@@ -41,11 +41,11 @@ def _chunkshapes(chunks, numblocks):
 
 
 def _bandshapes_from_numblocks_bandchunks(numblocks, bandchunks):
-        blocks_hw = numblocks[1:]
-        tot_hw_blocks = np.prod(blocks_hw)
-        bandshapes = [(chunk,) * tot_hw_blocks for chunk in bandchunks]
-        bandshapes = [(sh,) for shape in bandshapes for sh in shape]
-        return bandshapes
+    blocks_hw = numblocks[1:]
+    tot_hw_blocks = np.prod(blocks_hw)
+    bandshapes = [(chunk,) * tot_hw_blocks for chunk in bandchunks]
+    bandshapes = [(sh,) for shape in bandshapes for sh in shape]
+    return bandshapes
 
 
 def _arr_locs(chunklocs, chunkshapes):
@@ -91,17 +91,22 @@ def _shape_from_offend_pix(offends):
     shape = (p_height, p_width)
     return shape
 
+
 def _sum_chunk_shapes(shapes, numblocks):
     num_dims = len(shapes[0])
     nparr = np.asarray(shapes).reshape(*numblocks, num_dims)
-    first_col_index = ((slice(None),) * (len(numblocks) - 1) + (0,))
+    first_col_index = ((slice(None),) * (len(numblocks) - 1) +
+                       (0,))
     first_col = nparr[first_col_index]
-    heights_index = ((slice(None),) * (len(first_col.shape) - 1) + (num_dims - 2,))
+    heights_index = ((slice(None),) * (len(first_col.shape) - 1) +
+                     (num_dims - 2,))
     heights = first_col[heights_index]
     tot_height = sum(heights.flatten())
-    first_row_index = ((slice(None),) * (len(numblocks) - 2) + (0,))
+    first_row_index = ((slice(None),) * (len(numblocks) - 2) +
+                       (0,))
     first_row = nparr[first_row_index]
-    widths_index = ((slice(None),) * (len(first_row.shape) - 1) + (num_dims - 1,))
+    widths_index = ((slice(None),) * (len(first_row.shape) - 1) +
+                    (num_dims - 1,))
     widths = first_row[widths_index]
     tot_width = sum(widths.flatten())
     return (tot_height, tot_width)
@@ -111,14 +116,18 @@ def _chunks_from_shapes_numblocks(shapes, numblocks):
     # num_dims redundant; rewrite for bands in shapes if true 3d resample
     num_dims = len(numblocks)
     nparr = np.asarray(shapes).reshape(*numblocks, num_dims)
-    first_col_index = ((slice(None),) * (num_dims - 1) + (0,))
+    first_col_index = ((slice(None),) * (num_dims - 1) +
+                       (0,))
     first_col = nparr[first_col_index]
-    heights_index = ((slice(None),) * (len(first_col.shape) - 1) + (num_dims - 2,))
+    heights_index = ((slice(None),) * (len(first_col.shape) - 1) +
+                     (num_dims - 2,))
     heights = first_col[heights_index]
     heights_chunk = tuple(heights.flatten().tolist())
-    first_row_index = ((slice(None),) * (num_dims - 2) + (0,))
+    first_row_index = ((slice(None),) * (num_dims - 2) +
+                       (0,))
     first_row = nparr[first_row_index]
-    widths_index = ((slice(None),) * (len(first_row.shape) - 1) + (num_dims - 1,))
+    widths_index = ((slice(None),) * (len(first_row.shape) - 1) +
+                    (num_dims - 1,))
     widths = first_row[widths_index]
     widths_chunk = tuple(widths.flatten().tolist())
     return (heights_chunk, widths_chunk)
@@ -134,11 +143,11 @@ def _sp_ref_coords(crs_cf):
 
 def _make_coords(shape, bounds):
     b, h, w = shape
-    
+
     bands = np.array(range(1, b + 1), dtype=np.int64)
     bands_da = xr.DataArray(bands, name='band', dims=('band'))
-    bands_da.coords['band'] =  bands
-    
+    bands_da.coords['band'] = bands
+
     xmin, ymin, xmax, ymax = bounds
     X, Y = xmax - xmin, ymax - ymin
     resx, resy = X / w, Y / h
@@ -156,19 +165,19 @@ def _add_coords_crs_tr_da(nparr, bounds, input_crs, transform):
     shape = nparr.shape
 
     coords = _make_coords(shape, bounds)
-    
+
     xr_da = xr.DataArray(nparr, dims=('band', 'y', 'x'))
-    
+
     for coord in coords:
         xr_da.coords[coord] = coords[coord]
-    
+
     crs = CRS(input_crs)
     crs_cf = crs.to_cf()
     GeoTransform = ' '.join([str(num) for num in transform.to_gdal()])
     crs_cf['GeoTransform'] = GeoTransform
-    
+
     spatial_ref = _sp_ref_coords(crs_cf)
     xr_da.coords['spatial_ref'] = spatial_ref
     xr_da.attrs['grid_mapping'] = 'spatial_ref'
-    
+
     return xr_da
