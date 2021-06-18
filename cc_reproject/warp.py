@@ -105,6 +105,7 @@ def _np_reproject(src, src_transform, src_crs, dst_shape, dst_crs, **kwargs):
 
     src_bands, src_height, src_width = src_shape = _src.shape
 
+    src_res = src_transform.a, src_transform.e
     src_xy_shape = (src_width, src_height)
 
     if dst_shape is None:
@@ -124,14 +125,16 @@ def _np_reproject(src, src_transform, src_crs, dst_shape, dst_crs, **kwargs):
     d_xoff, d_yoff = d_offsets
     d_xend, d_yend = d_endsets
 
-    d_resx, d_resy = d_res =\
-        (d_xend - d_xoff) / d_width, (d_yoff - d_yend) / -d_height
+    d_resx, d_resy = (d_xend - d_xoff) / d_width,\
+                     (d_yoff - d_yend) / -d_height
 
     d_bounds = (d_xoff, d_yoff, d_xend, d_yend)
     d_transform = A(d_resx, 0, d_xoff, 0, d_resy, d_yoff)
 
+    s_offends = _transform_xy_pts((d_offsets, d_endsets),
+                                  dst_crs, src_crs)
     s_affine, s_pix0, s_pix1 =\
-        _sbk_affine_pad_pix([d_offsets, d_endsets], d_res, src_shape,
+        _sbk_affine_pad_pix(s_offends, src_res, src_shape,
                             src_transform, 0)
     s_x0, s_y0 = s_pix0
     s_x1, s_y1 = s_pix1
