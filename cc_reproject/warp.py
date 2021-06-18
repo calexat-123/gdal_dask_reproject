@@ -220,7 +220,8 @@ def _dask_reproject(src, src_transform, src_crs, dst_shape, dst_crs,
         if not isinstance(_src, da.Array):
             chunks = tuple(int(math.ceil(src_shape[i]/numblocks[i]))
                            for i in range(len(numblocks)))
-            _src = da.from_array(src, chunks=chunks)
+            chunks = (bandchunks, *chunks[1:])
+            _src = da.from_array(_src, chunks=chunks)
     else:
         numblocks = _src.numblocks
         bandchunks = _src.chunks[0]
