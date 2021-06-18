@@ -333,10 +333,12 @@ def _dask_reproject(src, src_transform, src_crs, dst_shape, dst_crs,
                 input_key, *ii = key
                 dbk_shape, dbk_affine, s_affine_pix_bd = locs[tuple(ii)]
                 s_affine, *_pix_bd = s_affine_pix_bd
-                if band_kwargs is not None:
-                    band_idx = ii[0]
-                    b_kwargs = band_kwargs[band_idx]
-                    kwargs = b_kwargs
+                band_idx = ii[0]
+                if band_idx in band_kwargs:
+                    bd_kwargs = band_kwargs[band_idx]
+                    bk_kwargs = {**kwargs, **bd_kwargs}
+                else:
+                    bk_kwargs = kwargs
                 layers[reproject_name][(reproject_name, *ii)] =\
                     (_block_reproject,
                      (input_key, *ii),
@@ -345,7 +347,7 @@ def _dask_reproject(src, src_transform, src_crs, dst_shape, dst_crs,
                      dbk_shape,
                      dbk_affine,
                      dst_crs,
-                     kwargs)
+                     bk_kwargs)
 
         graph = HighLevelGraph.from_collections(reproject_name,
                                                 layers[reproject_name],
