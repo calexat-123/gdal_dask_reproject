@@ -152,7 +152,8 @@ def _np_reproject(src, src_transform, src_crs, dst_shape, dst_crs, **kwargs):
 
 
 def _dask_reproject(src, src_transform, src_crs, dst_shape, dst_crs,
-                    dst_chunks=None, numblocks=None, **kwargs):
+                    dst_chunks=None, numblocks=None, band_kwargs=None,
+                    **kwargs):
     """
     Reprojection with dask by reprojecting chunk by chunk.
 
@@ -332,6 +333,10 @@ def _dask_reproject(src, src_transform, src_crs, dst_shape, dst_crs,
                 input_key, *ii = key
                 dbk_shape, dbk_affine, s_affine_pix_bd = locs[tuple(ii)]
                 s_affine, *_pix_bd = s_affine_pix_bd
+                if band_kwargs is not None:
+                    band_idx = ii[0]
+                    b_kwargs = band_kwargs[band_idx]
+                    kwargs = b_kwargs
                 layers[reproject_name][(reproject_name, *ii)] =\
                     (_block_reproject,
                      (input_key, *ii),
@@ -360,7 +365,8 @@ def _dask_reproject(src, src_transform, src_crs, dst_shape, dst_crs,
 
 
 def reproject(arr, dst_crs, dst_shape=None,
-              chunks=None, numblocks=None, **kwargs):
+              chunks=None, numblocks=None,
+              band_kwargs=None, **kwargs):
     """
     Reprojects spatially referenced rasters to desired crs.
 
@@ -412,6 +418,7 @@ def reproject(arr, dst_crs, dst_shape=None,
                                            dst_shape, dst_crs,
                                            dst_chunks=chunks,
                                            numblocks=numblocks,
+                                           band_kwargs=band_kwargs,
                                            **kwargs)
     elif isinstance(src, np.ndarray):
         reprojected_data = _np_reproject(src, src_transform, src_crs,
