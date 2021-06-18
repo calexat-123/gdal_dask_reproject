@@ -38,26 +38,6 @@ def _affine_from_offsets_res(offsets, res):
     return affine
 
 
-def _transform_boundary_pix(src_xy_shape, src_affine, src_crs, dst_crs, res):
-    s_offsets, s_endsets = _boundary_from_shape_affine(src_xy_shape,
-                                                       src_affine)
-
-    d_offsets, d_endsets = _transform_xy_pts([s_offsets, s_endsets],
-                                             src_crs, dst_crs)
-    d_xoff, d_yoff = d_offsets
-
-    d_resx, d_resy = res
-
-    dst_affine = A(d_resx, 0, d_xoff, 0, d_resy, d_yoff)
-    rev_dst_affine = ~dst_affine
-
-    d_minxy_pix = rev_dst_affine * d_offsets
-    d_maxxy_pix = rev_dst_affine * d_endsets
-    d_minxy_pix = [abs(int(dim)) for dim in d_minxy_pix]
-    d_maxxy_pix = [abs(int(math.ceil(dim))) for dim in d_maxxy_pix]
-    return dst_affine, d_minxy_pix, d_maxxy_pix
-
-
 def _calc_default_dst_shape_boundary(src_xy_shape, src_affine,
                                      src_crs, dst_crs):
     _, s_height = src_xy_shape
@@ -97,12 +77,8 @@ def _sbk_affine_pad_pix(offend_sets, res, src_shape, src_transform, padding):
     p_xend, p_yend = min(w, p_xend + padding), min(h, p_yend + padding)
     p_endsets = [p_xend, p_yend]
     offsets_pad = src_transform * p_offsets
-    endsets_pad = src_transform * p_endsets
-    xoff, yoff = offsets_pad
-    xend, yend = endsets_pad
-    resx, resy = res
 
-    affine = A(resx, 0, xoff, 0, resy, yoff)
+    affine = _affine_from_offsets_res(offsets_pad, res)
 
     return affine, p_offsets, p_endsets
 
@@ -127,9 +103,8 @@ def _np_reproject(src, src_transform, src_crs, dst_shape, dst_crs, **kwargs):
     else:
         _src = src
 
-    src_bands, src_height, src_width = _src.shape
+    src_bands, src_height, src_width = src_shape = _src.shape
 
-    src_res = src_transform.a, src_transform.e
     src_xy_shape = (src_width, src_height)
 
     if dst_shape is None:
@@ -149,17 +124,15 @@ def _np_reproject(src, src_transform, src_crs, dst_shape, dst_crs, **kwargs):
     d_xoff, d_yoff = d_offsets
     d_xend, d_yend = d_endsets
 
-    d_resx, d_resy = (d_xend - d_xoff) / d_width, (d_yoff - d_yend) / -d_height
+    d_resx, d_resy = d_res =\
+        (d_xend - d_xoff) / d_width, (d_yoff - d_yend) / -d_height
 
     d_bounds = (d_xoff, d_yoff, d_xend, d_yend)
     d_transform = A(d_resx, 0, d_xoff, 0, d_resy, d_yoff)
 
-    dst_shape_yx = dst_shape[1:]
-    dst_xy_shape = dst_shape_yx[::-1]
-
     s_affine, s_pix0, s_pix1 =\
-        _transform_boundary_pix(dst_xy_shape, d_transform,
-                                dst_crs, src_crs, src_res)
+        _sbk_affine_pad_pix([d_offsets, d_endsets], d_res, src_shape,
+                            src_transform, 0)
     s_x0, s_y0 = s_pix0
     s_x1, s_y1 = s_pix1
     src_crop = _src[:, s_y0:s_y1, s_x0:s_x1]
