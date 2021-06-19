@@ -67,10 +67,10 @@ band_kwargs = {
         'resampling': Resampling.min
     },
 }
-reproject(my_data_arr, dst_crs, chunks=((1,1,1), (200,), (400,)), band_kwargs=band_kwargs, resampling=Resampling.bilinear)
+reproject(my_data_arr, dst_crs, chunks=((1, 2), (200,), (400,)), band_kwargs=band_kwargs, resampling=Resampling.bilinear)
 --> xarray.DataArray(dask) 
-    band 1: resampled by min
-    band 2 and band 3: resampled by bilinear
+    band chunk 0: band 1: resampled by min
+    band chunk 1: band 2 and band 3: resampled by bilinear
 ```
 
 #### Based on the work of Kirill Kouzoubov in OpenDataCube and with the desire to have a standalone GDAL dask reprojection package: (Note: all errors are my own).
