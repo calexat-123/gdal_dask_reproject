@@ -222,7 +222,7 @@ def _dask_reproject(src, src_transform, src_crs, dst_shape, dst_crs,
             chunks = (bandchunks, *chunks[1:])
             _src = da.from_array(_src, chunks=chunks)
         else:
-            bandchunks = _src.chunks
+            bandchunks = _src.chunks[0]
             dst_chunks = (bandchunks, *dst_chunks[1:])
     else:
         numblocks = _src.numblocks
