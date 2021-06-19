@@ -25,23 +25,56 @@
 ```
 from cc_reproject import reproject
 
-reproject(xr.DataArray(np or dask), dst_crs, **kwargs)
+reproject(xarray.DataArray(np or dask), dst_crs, **kwargs)
 
---> xr.DataArray(np or dask)
+--> xarray.DataArray(np or dask)
 ```
 
 ```
-reproject(xr.DataArray(np), dst_crs, numblocks=(1, 2, 2), **kwargs)
---> xr.DataArray(dask) chunked 1, 2, 2 time along band, height, width
+reproject(xarray.DataArray(np), dst_crs, numblocks=(1, 2, 2), **kwargs)
+--> xarray.DataArray(dask) chunked 1, 2, 2 time along band, height, width
 ```
 ##### Using the 'geo' accessor:
 
 ```
 from cc_reproject import geo
 
-my_data_array = xr.DataArray(...)
+my_data_array = xarray.DataArray(...)
 my_data_array.geo.reproject(dst_crs, **kwargs)
---> reprojected xr.DataArray
+--> reprojected xarray.DataArray
+```
+##### Adding kwargs for rasterio.warp.reproject
+```
+from cc_reproject import reproject
+from rasterio.warp import Resampling
+
+my_data_arr = xarray.DataArray(np or dask)
+reproject(my_data_arr, dst_crs, resampling=Resampling.min)
+--> reprojected xarray.DataArray(np or dask) resampled according to input
+```
+##### Support for multiband chunking
+gdal_dask_reproject also allows chunking along band dimension for multiband rasters. You can add `band_kwargs` to apply specifically to each band chunk.
+`band_kwargs` is a dict with keys for each band chunk index; for example: if 3 bands are split into 2 chunks 1, 2 in length, then keys would be `0` and `1`.
+You can also set global kwargs differing from the ones set for specific band chunks and these will apply to all other bands.
+```
+from cc_reproject import reproject
+from rasterio.warp import Resampling
+
+# 3-band raster, for example
+my_data_arr = xarray.DataArray(np or dask: shape = (3, 200, 400))
+band_kwargs = {
+    0: {
+        resampling: Resampling.min
+    },
+    1: {
+        resampling: Resampling.max
+    }
+}
+reproject(my_data_arr, dst_crs, chunks=((1,1,1), (200,), (400,)), band_kwargs=band_kwargs, resampling=Resampling.bilinear)
+--> xarray.DataArray(dask) 
+    band 1: resampled by min
+    band 2: resampled by max
+    band 3: resampled by bilinear
 ```
 
 #### Inspired by the work of Kirill Kouzoubov in OpenDataCube and with the desire to have a standalone GDAL dask reprojection package: (Note: all errors are my own).
