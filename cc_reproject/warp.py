@@ -83,6 +83,66 @@ def _sbk_affine_pad_pix(offend_sets, res, src_shape, src_transform, padding):
     return affine, p_offsets, p_endsets
 
 
+def _add_layers(self, locs,
+                src_crs, sbk_chunks, sbk_tot_shape,
+                dst_shape, dst_chunks, dst_crs,
+                band_kwargs=None, **kwargs):
+    crop_name = _tokenize('crop_src')
+    reproject_name = _tokenize('reproject')
+    layers = {crop_name: {}, reproject_name: {}}
+
+    keys = self.__dask_graph__().keys()
+    for key in keys:
+        if isinstance(key, tuple):
+            input_key, *ii = key
+            s_affine_pix_bd = locs[tuple(ii)][2]
+            s_affine, s_pix0, s_pix1, bands_loc = s_affine_pix_bd
+            s_x0, s_y0 = s_pix0
+            s_x1, s_y1 = s_pix1
+            b0, b1 = bands_loc
+
+            def _crop(nparr, y0, y1, x0, x1, b0, b1):
+                return self[b0:b1, y0:y1, x0:x1]
+            layers[crop_name][(crop_name, *ii)] = (_crop,
+                                                   (input_key, *ii),
+                                                   s_y0, s_y1,
+                                                   s_x0, s_x1,
+                                                   b0, b1)
+    crop_graph = HighLevelGraph.from_collections(crop_name,
+                                                 layers[crop_name],
+                                                 dependencies=[self])
+    arr = da.Array(crop_graph, crop_name, chunks=sbk_chunks,
+                   dtype=np.uint16, shape=sbk_tot_shape)
+
+    arr_keys = list(layers[crop_name].keys())
+    for key in arr_keys:
+        if isinstance(key, tuple):
+            input_key, *ii = key
+            dbk_shape, dbk_affine, s_affine_pix_bd = locs[tuple(ii)]
+            s_affine, *_pix_bd = s_affine_pix_bd
+            band_idx = ii[0]
+            if band_kwargs is not None and band_idx in band_kwargs:
+                bd_kwargs = band_kwargs[band_idx]
+                bk_kwargs = {**kwargs, **bd_kwargs}
+            else:
+                bk_kwargs = kwargs
+            layers[reproject_name][(reproject_name, *ii)] =\
+                (_block_reproject,
+                 (input_key, *ii),
+                 s_affine,
+                 src_crs,
+                 dbk_shape,
+                 dbk_affine,
+                 dst_crs,
+                 bk_kwargs)
+
+    graph = HighLevelGraph.from_collections(reproject_name,
+                                            layers[reproject_name],
+                                            dependencies=[arr])
+    return da.Array(graph, reproject_name, chunks=dst_chunks,
+                    dtype=np.uint16, shape=dst_shape)
+
+
 def _block_reproject(src, src_transform, src_crs,
                      dst_shape, dst_transform, dst_crs, kwargs):
     dst = np.zeros(dst_shape, dtype=np.uint16)
@@ -300,66 +360,10 @@ def _dask_reproject(src, src_transform, src_crs, dst_shape, dst_crs,
     sbk_tot_shape_yx = _sum_chunk_shapes(sbk_shapes_hw, numblocks)
     sbk_tot_shape = (src_bands, *sbk_tot_shape_yx)
 
-    def _add_layers(self, locs,
-                    src_crs, sbk_chunks, sbk_tot_shape,
-                    dst_shape, dst_chunks, dst_crs, **kwargs):
-        crop_name = _tokenize('crop_src')
-        reproject_name = _tokenize('reproject')
-        layers = {crop_name: {}, reproject_name: {}}
-
-        keys = self.__dask_graph__().keys()
-        for key in keys:
-            if isinstance(key, tuple):
-                input_key, *ii = key
-                s_affine_pix_bd = locs[tuple(ii)][2]
-                s_affine, s_pix0, s_pix1, bands_loc = s_affine_pix_bd
-                s_x0, s_y0 = s_pix0
-                s_x1, s_y1 = s_pix1
-                b0, b1 = bands_loc
-
-                def _crop(nparr, y0, y1, x0, x1, b0, b1):
-                    return self[b0:b1, y0:y1, x0:x1]
-                layers[crop_name][(crop_name, *ii)] = (_crop,
-                                                       (input_key, *ii),
-                                                       s_y0, s_y1,
-                                                       s_x0, s_x1,
-                                                       b0, b1)
-        crop_graph = HighLevelGraph.from_collections(crop_name,
-                                                     layers[crop_name],
-                                                     dependencies=[self])
-        arr = da.Array(crop_graph, crop_name, chunks=sbk_chunks,
-                       dtype=np.uint16, shape=sbk_tot_shape)
-
-        arr_keys = list(layers[crop_name].keys())
-        for key in arr_keys:
-            if isinstance(key, tuple):
-                input_key, *ii = key
-                dbk_shape, dbk_affine, s_affine_pix_bd = locs[tuple(ii)]
-                s_affine, *_pix_bd = s_affine_pix_bd
-                band_idx = ii[0]
-                if band_kwargs is not None and band_idx in band_kwargs:
-                        bd_kwargs = band_kwargs[band_idx]
-                        bk_kwargs = {**kwargs, **bd_kwargs}
-                else:
-                    bk_kwargs = kwargs
-                layers[reproject_name][(reproject_name, *ii)] =\
-                    (_block_reproject,
-                     (input_key, *ii),
-                     s_affine,
-                     src_crs,
-                     dbk_shape,
-                     dbk_affine,
-                     dst_crs,
-                     bk_kwargs)
-
-        graph = HighLevelGraph.from_collections(reproject_name,
-                                                layers[reproject_name],
-                                                dependencies=[arr])
-        return da.Array(graph, reproject_name, chunks=dst_chunks,
-                        dtype=np.uint16, shape=dst_shape)
     reproject_dsk = _add_layers(_src, d_shp_tr_s_tr_pix_bd,
                                 src_crs, sbk_chunks, sbk_tot_shape,
-                                dst_shape, dst_chunks, dst_crs, **kwargs)
+                                dst_shape, dst_chunks, dst_crs,
+                                band_kwargs=band_kwargs, **kwargs)
 
     if _src.dtype != src.dtype:
         reproject_dsk = reproject_dsk.astype(np.uint8)
