@@ -15,23 +15,23 @@ def _boundary_from_shape_affine(xy_shape, affine):
     return (x_offsets, x_endsets)
 
 
-def _calc_chunks_hw(numblocks_yx, shape_yx):
-    chunks_hw = []
-    for i in range(len(numblocks_yx)):
-        chunks_hw.append([])
-        for j in range(numblocks_yx[i]):
-            chunk_dim = int(math.ceil(shape_yx[i]/numblocks_yx[i]))
-            chunks_hw[i].append(chunk_dim)
-    diffs = [shape_yx[i] - sum(chunks_hw[i]) for i in range(len(chunks_hw))]
+def _calc_chunks(numblocks, shape):
+    chunks = []
+    for i in range(len(numblocks)):
+        chunks.append([])
+        for j in range(numblocks[i]):
+            chunk_dim = int(math.ceil(shape[i]/numblocks[i]))
+            chunks[i].append(chunk_dim)
+    diffs = [shape[i] - sum(chunks[i]) for i in range(len(chunks))]
     for i in range(len(diffs)):
         if diffs[i] != 0:
             # perhaps add splitting adjustment into next chunk
-            chunks_hw[i][-1] += diffs[i]
-    chunks_hw = tuple(tuple(dim) for dim in chunks_hw)
-    return chunks_hw
+            chunks[i][-1] += diffs[i]
+    chunks = tuple(tuple(dim) for dim in chunks)
+    return chunks
 
 
-def _chunkshapes(chunks, numblocks):
+def _chunkshapes(chunks):
     chunkshapes = []
     for i in range(len(chunks[0])):
         for j in range(len(chunks[1])):
