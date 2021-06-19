@@ -337,8 +337,7 @@ def _dask_reproject(src, src_transform, src_crs, dst_shape, dst_crs,
                 dbk_shape, dbk_affine, s_affine_pix_bd = locs[tuple(ii)]
                 s_affine, *_pix_bd = s_affine_pix_bd
                 band_idx = ii[0]
-                if band_kwargs is not None:
-                    if band_idx in band_kwargs:
+                if band_kwargs is not None and band_idx in band_kwargs:
                         bd_kwargs = band_kwargs[band_idx]
                         bk_kwargs = {**kwargs, **bd_kwargs}
                 else:
