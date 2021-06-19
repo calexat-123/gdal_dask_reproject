@@ -27,12 +27,22 @@ install_requires = [
     'rioxarray',
 ]
 
+extras_require = {
+    'tests': [
+        'pytest',
+    ]
+}
+
 setup_args = dict(
     name='gdal_dask_reproject',
     version=version,
     install_requires=install_requires,
+    tests_require=extras_require['tests'],
     zip_safe=False,
-    packages=['cc_reproject',],
+    packages=[
+        'cc_reproject',
+        'cc_reproject.tests'
+        ],
     include_package_data=True,
     # entry_points={
     #     'console_scripts': [
