@@ -31,12 +31,12 @@ def test_np_reproject_kwargs():
 
 
 def test_np_to_dsk():
-    repr_np_dsk = reproject(elev_ll, dst_crs, chunks=((1, 2), (120, 120), (255, 255)))
+    repr_np_dsk = reproject(elev_ll, dst_crs, chunks=((1, 2), (169, 169), (206, 205)))
     repr_np_dsk_2 = reproject(elev_ll, dst_crs, numblocks=(2, 2, 2))
     assert repr_np_dsk.data.shape == (3, 338, 411)
     assert repr_np_dsk_2.data.shape == (3, 338, 411)
     assert isinstance(repr_np_dsk.data, da.Array)
-    assert isinstance(repr_np_dsk_2, da.Array)
+    assert isinstance(repr_np_dsk_2.data, da.Array)
 
 
 def test_reproject_dsk():
