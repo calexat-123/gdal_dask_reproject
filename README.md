@@ -73,7 +73,7 @@ reproject(my_data_arr, dst_crs, chunks=((1,1,1), (200,), (400,)), band_kwargs=ba
     band 2 and band 3: resampled by bilinear
 ```
 
-#### Inspired by the work of Kirill Kouzoubov in OpenDataCube and with the desire to have a standalone GDAL dask reprojection package: (Note: all errors are my own).
+#### Based on the work of Kirill Kouzoubov in OpenDataCube and with the desire to have a standalone GDAL dask reprojection package: (Note: all errors are my own).
 
 [Issue in rioxarray](https://github.com/corteva/rioxarray/issues/119)
 
