@@ -62,23 +62,24 @@ reproject(my_data_arr, dst_crs, resampling=Resampling.min)
 ```
 ##### Support for multiband chunking
 gdal_dask_reproject also allows chunking along band dimension for multiband rasters. You can add `band_kwargs` to apply specifically to each band chunk.
-`band_kwargs` is a dict with keys for each band chunk index; for example: if 3 bands are split into 2 chunks 1, 2 in length, then keys would be `0` and `1`.
-You can also set global kwargs differing from the ones set for specific band chunks and these will apply to all other bands.
+`band_kwargs` is a dict with keys for each band chunk index, and values that are dicts of kwargs for each band index; for example: if 3 bands are split into 2 chunks 1, 2 in length, then keys would be `0` and `1`.
+You can also set global kwargs differing from the ones set for specific band chunks. Any band_kwargs will overrride global kwargs for those bands specified, but the rest of the kwargs and the bands not included in band_kwargs will have the global settings.
 ```
 from cc_reproject import reproject
 from rasterio.warp import Resampling
 
 # 3-band raster, for example
 my_data_arr = xarray.DataArray(np or dask: shape = (3, 200, 400))
+band_chunks = (1, 2)
 band_kwargs = {
     0: {
         'resampling': Resampling.min
     },
 }
 
-# 300 and 600 below are arbitrary chunk height and width settings. Using these, the returned DataArray will
+# 300 and 600 tuples below are arbitrary chunk height and width settings. Using these, the returned DataArray will
 # have the shape (3, 300, 600), based on summing the chunks specified for the destination.
-reproject(my_data_arr, dst_crs, chunks=((1, 2), (300,), (600,)), band_kwargs=band_kwargs, resampling=Resampling.bilinear)
+reproject(my_data_arr, dst_crs, chunks=(band_chunks, (300,), (600,)), band_kwargs=band_kwargs, resampling=Resampling.bilinear)
 --> xarray.DataArray(dask) 
     band chunk 0: band 1: resampled by min
     band chunk 1: band 2 and band 3: resampled by bilinear
