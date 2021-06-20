@@ -1,7 +1,7 @@
 {% set sdata = load_setup_py_data() %}
 
 package:
-  name: gdal_dask_reproject
+  name: cc_reproject
   version: "0.0.5b"
 
 source:
