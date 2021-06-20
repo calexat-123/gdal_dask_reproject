@@ -314,8 +314,6 @@ def _dask_reproject(src, src_transform, src_crs, dst_shape, dst_crs,
 
     d_shp_tr_s_tr_pix_bd = dict(zip(chunklocs, dbk_shapes_lists))
 
-    sbk_pix = []
-
     dbk_offend_sets = []
 
     for i in range(len(chunklocs)):
@@ -342,6 +340,8 @@ def _dask_reproject(src, src_transform, src_crs, dst_shape, dst_crs,
                                            src_transform, padding)
                        for sbk_offend_set in sbk_offend_sets]
 
+    sbk_pix = []
+
     for i in range(len(chunklocs)):
         loc = chunklocs[i]
         sbk_affine_pix = sbk_affines_pix[i]
@@ -351,8 +351,7 @@ def _dask_reproject(src, src_transform, src_crs, dst_shape, dst_crs,
         sbk_p = sbk_affine_pix[1:]
         sbk_pix.append(sbk_p)
 
-    vals = d_shp_tr_s_tr_pix_bd.values()
-    sbk_shapes_hw = [_shape_from_offend_pix(val[2][1:-1]) for val in vals]
+    sbk_shapes_hw = [_shape_from_offend_pix(pix) for pix in sbk_pix]
     # not real shapes, but good for hw chunks calc
     sbk_shapes_pseudo = [(src_bands, *shape) for shape in sbk_shapes_hw]
     sbk_chunks_hw = _chunks_from_shapes_numblocks(sbk_shapes_pseudo, numblocks)
